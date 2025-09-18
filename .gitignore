@@ -1,5 +1,24 @@
+.env
+env/
+.venv
+venv/
+.venv/
+.git
+.git/
+.env
+*.log
+*.pyc
+cache.db
+cache.db-*
+
+__pycache__/
+copies_and_archive/
+files/
+node_modules/
+testing/
+
 /index_claude.html
 /index_gemini.html
-/node_modules
-/OPENAI_API_KEY.txt
 /Prompt for AI Job Application Tool.docx
+
+OPENAI_API_KEY.txt
