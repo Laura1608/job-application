@@ -1,0 +1,7 @@
+streamlit
+openai
+python-docx
+PyPDF2
+requests
+beautifulsoup4
+pdfminer.six
