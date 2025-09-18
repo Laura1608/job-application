@@ -8,6 +8,7 @@ Important: This template strictly uses only the text provided in the uploaded re
 """
 
 import os
+import warnings
 import streamlit as st
 from openai import OpenAI
 import requests
@@ -16,14 +17,26 @@ from io import BytesIO
 from pdfminer.high_level import extract_text as extract_pdf_text
 import docx
 
+# Suppress warnings
+warnings.filterwarnings("ignore")
+
 def load_api_key():
-    """Load OpenAI API key from environment variables (Railway) or file (local backup)."""
-    # Priority 1: Railway/Environment variables (for deployment)
+    """Load OpenAI API key from Streamlit secrets or local backup."""
+    # Priority 1: Streamlit secrets (for Streamlit Community Cloud deployment)
+    try:
+        if "OPENAI_API_KEY" in st.secrets:
+            key = st.secrets["OPENAI_API_KEY"]
+            if key and key.strip():
+                return key.strip()
+    except Exception:
+        pass
+    
+    # Priority 2: Environment variables (fallback)
     key = os.getenv("OPENAI_API_KEY")
     if key and key.strip():
         return key.strip()
     
-    # Priority 2: Local file backup (for development)
+    # Priority 3: Local file backup (for development)
     try:
         with open("OPENAI_API_KEY.txt", "r") as f:
             key = f.read().strip()
@@ -144,7 +157,7 @@ def build_prompt(resume_text, cover_text, job_text, additional_notes="", tone=No
         "Explicitly connect the candidate’s skills, projects, or achievements to the requirements in the job description, "
         "and use keywords from the posting where appropriate."
         "Focus on how the candidate can deliver value to the client or employer, not just on listing skills."
-        "Make sure to not start every sentence with 'My', 'I', or 'Me'."
+        "Make sure to bring variety in sentences, not just starting with 'My', 'I', or 'Me'."
         "Target length: 200–250 words (3–4 short paragraphs)."
         "Each sentence should be under 20 words for readability."
         "If measurable results are present in the resume/cover letter, include one strong example."
