@@ -17,18 +17,22 @@ from pdfminer.high_level import extract_text as extract_pdf_text
 import docx
 
 def load_api_key():
-    """Load OpenAI API key from file or environment."""
+    """Load OpenAI API key from environment variables (Railway) or file (local backup)."""
+    # Priority 1: Railway/Environment variables (for deployment)
+    key = os.getenv("OPENAI_API_KEY")
+    if key and key.strip():
+        return key.strip()
+    
+    # Priority 2: Local file backup (for development)
     try:
         with open("OPENAI_API_KEY.txt", "r") as f:
             key = f.read().strip()
             if key:
                 return key
     except FileNotFoundError:
-        key = os.getenv("OPENAI_API_KEY")
-        if key:
-            return key
+        pass
 
-    st.error("❌ OpenAI API key not found in files or environment variables.")
+    st.error("❌ OpenAI API key not found in environment variables.")
     return None
 
 if __name__ == "__main__":
