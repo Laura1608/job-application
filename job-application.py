@@ -33,7 +33,7 @@ st.markdown("Upload your resume and cover letter, paste or provide a job URL, ty
 col1, col2 = st.columns(2)
 with col1:
     resume_file = st.file_uploader("Upload Resume (PDF or DOCX)", type=['pdf','docx'])
-    cover_file = st.file_uploader("Upload Cover Letter (PDF or DOCX)", type=['pdf','docx'])
+    cover_file = st.file_uploader("Upload previous Cover Letter (PDF or DOCX) (optional)", type=['pdf','docx'])
 with col2:
     job_url = st.text_input("Job URL (optional)")
     job_text = st.text_area("Or paste job description text here (optional)")
@@ -58,13 +58,13 @@ with col3:
     }
     
     if formality_options[language]:
-        formality = st.selectbox("Formality", formality_options[language])
+        formality = st.selectbox("Formality", formality_options[language], key=f"formality_{language}")
     else:
         formality = None
-        st.selectbox("Formality", ["Not applicable"], disabled=True)
+        st.selectbox("Formality", ["Standard business tone"], disabled=True, key="formality_disabled")
 
 # Additional user-provided notes at the bottom
-additional_notes = st.text_input("Manual notes (optional)", placeholder="Add any short notes you want considered, e.g., 'experience with WordPress'.")
+additional_notes = st.text_input("Manual notes (optional)", placeholder="Add any short notes you want considered in ENGLISH, e.g., 'experience with WordPress'.")
 
 # Store generated content in session state for rewriting
 if 'last_generated_content' not in st.session_state:
@@ -120,6 +120,7 @@ if generate_clicked or rewrite_clicked:
                 rewrite_prompt = f"""
                 Please rewrite the following text to improve it. Keep the same content and meaning but make it sound more natural and native in {language}. 
                 Make sure to use appropriate formality level: {formality if formality else 'standard business tone'}.
+                Format: Write exactly 3 paragraphs of 35–45 words each (not much more), followed by a one-liner closing sentence that describes what you hope to start doing together.
                 Avoid overly formal or non-native expressions.
                 
                 Original text:
@@ -159,12 +160,20 @@ if generate_clicked or rewrite_clicked:
             st.session_state.last_generated_content = output
             st.text_area("Generated reply", value=output, height=300, key="generated_reply")
             
+            # Check for response placeholders and show warning
+            if "[response]" in output:
+                st.warning("⚠️ **Action Required**: This response contains placeholder(s) marked with [response] that need to be filled in with your specific information (e.g., price, timeline, availability). Please review and update these before sending.")
+            
         except Exception as e:
             st.error(f"Error while generating: {e}")
 
 # Show last generated content if available (for rewriting context)
 if st.session_state.last_generated_content and not (generate_clicked or rewrite_clicked):
     st.text_area("Generated reply", value=st.session_state.last_generated_content, height=300, key="generated_reply")
+    
+    # Check for response placeholders and show warning
+    if "[response]" in st.session_state.last_generated_content:
+        st.warning("⚠️ **Action Required**: This response contains placeholder(s) marked with [response] that need to be filled in with your specific information (e.g., price, timeline, availability). Please review and update these before sending.")
 
 st.markdown("---")
 st.caption("Template strictly uses only uploaded resume & cover letter and provided job description. Do not claim skills not present in your documents.")

@@ -165,36 +165,29 @@ def build_prompt(resume_text, cover_text, job_text, additional_notes="", tone=No
     # Build language-specific instructions
     if language != "English" and lang_guide:
         language_instruction = f"""
-        CRITICAL: Write the response in {language}. Follow these specific guidelines for native-quality output:
-
-        Style: {lang_guide.get('style', '')}
-        Cultural Context: {lang_guide.get('cultural', '')}
-        Avoid: {lang_guide.get('avoid', '')}
-
-        IMPORTANT:
-        - Use only native-level {language} expressions
-        - Ensure the text sounds natural to a native {language} speaker
-        - Use appropriate formality level: {formality if formality else 'standard business tone'}
-        - Avoid literal translations from English
-        - Make it sound like a native speaker, not a translation
+        LANGUAGE: Write in {language} using {formality if formality else 'standard business tone'}.
+        
+        STYLE: {lang_guide.get('style', '')}
+        CULTURAL CONTEXT: {lang_guide.get('cultural', '')}
+        AVOID: {lang_guide.get('avoid', '')}
         """
     else:
         language_instruction = ""
 
     system_instructions = (
-        "You are a personal assistant that writes professional job application cover letters and responses."
-        "Always write in first person as the job applicant expressing interest in the position."
-        "Begin by expressing enthusiasm for the specific role and company you're applying to."
-        "Only use information from the resume, cover letter, user-provided notes, and job description."
-        "Do not invent details. If a skill or experience is missing, emphasize transferable skills instead."
+        "You are a personal assistant that writes professional job application cover letters and responses. "
+        "Always write in first person as the job applicant expressing interest in the position. "
+        "Begin by expressing enthusiasm for the specific role and company you're applying to. "
+        "Only use information from the resume, cover letter, user-provided notes, and job description. "
+        "Do not invent details. If a skill or experience is missing, emphasize transferable skills instead. "
         "Explicitly connect your skills, projects, or achievements to the requirements in the job description, "
-        "and use keywords from the posting where appropriate."
-        "Focus on how you can deliver value to the company, not just on listing skills."
-        "Make sure to bring variety in sentences, not just starting with 'My', 'I', or 'Me'."
-        "Target length: 200–250 words (3–4 short paragraphs)."
-        "Each sentence should be under 20 words for readability."
-        "If measurable results are present in the resume/cover letter, include one strong example."
-        "Always close with a confident, positive line about contributing to the role or team."
+        "and use keywords from the posting where appropriate. "
+        "Focus on how you can deliver value to the company, not just on listing skills. "
+        "Make sure to bring variety in sentences, not just starting with 'My', 'I', or 'Me'. "
+        "Format: Write exactly 3 paragraphs, each containing 35–45 words. Don't repeat information. "
+        "Each sentence should be under 20 words for readability. "
+        "If measurable results are present in the resume/cover letter, include one strong example. "
+        "Always close with a confident, positive one-liner sentence about contributing to the role or team (separate from the 3 paragraphs). "
         f"Keep tone: {tone}. {language_instruction}"
     )
 
@@ -203,16 +196,18 @@ def build_prompt(resume_text, cover_text, job_text, additional_notes="", tone=No
         f"Cover Letter:\n{cover_text}\n\n"
         f"Job Description:\n{job_text}\n\n"
         f"Additional Notes (user-provided):\n{additional_notes}\n\n"
-        f"Tone:\n{tone}\n\n"
         f"Language:\n{language}\n"
         f"Formality:\n{formality if formality else 'Standard business tone'}\n\n"
-        "Instructions: Using only the information above, produce a cohesive reply tailored to the job description."
-        "Make it sound natural, confident, and professional — not like an AI. Avoid complex language use like 'prowess', 'honed', or 'renowned'."
-        "Show enthusiasm for the role, align your skills with requirements, and highlight how you will add value to the company."
-        "Do not add any claims not supported by the provided materials."
-        "If no direct match is found, highlight transferable skills starting with your study background or related projects."
-        "This should be a job application cover letter, not a response from the employer."
-        "Write in natural, conversational language that sounds like a native speaker, not a translation."
+        "Instructions: Using only the information above, produce a cohesive reply tailored to the job description. "
+        "Make it sound natural and professional — not like an AI. Avoid complex language use like 'prowess', 'honed', or 'renowned'. "
+        "Do not add any claims not supported by the provided materials. "
+        "If no direct match is found, highlight transferable skills starting with your study background or related projects. "
+        "This should be a job application cover letter, not a response from the employer. "
+        "Format requirements: Write exactly 3 paragraphs of 35–45 words each, followed by a one-liner closing sentence that describes what you hope to start doing together. "
+        "If the job description mentions specific response requirements (like 'mention your price', 'include the project duration', 'specify your availability', etc.), "
+        "you MUST address them directly using this exact format: 'As requested, hereby my indication of requirement XYZ...'. "
+        "Do NOT avoid the requirement by saying you'll discuss it later. Always provide the placeholder format immediately. "
+        "IMPORTANT: Never fill in actual numbers, timeframes, or prices - always use [response] placeholder. "
     )
 
     return system_instructions, user_content
