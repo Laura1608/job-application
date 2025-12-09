@@ -70,6 +70,45 @@ def fetch_job_description(url):
     except Exception as e:
         return ''
 
+def get_greeting_format(language, formality=None):
+    """Get appropriate greeting format with placeholder for the language and formality level."""
+    greeting_formats = {
+        "English": {
+            "formal": "Dear (#)",
+            "informal": "Dear (#)"
+        },
+        "Dutch": {
+            "formal": "Geachte (#)",
+            "informal": "Beste (#)"
+        },
+        "French": {
+            "formal": "Madame, Monsieur",
+            "informal": "Bonjour (#)"
+        },
+        "German": {
+            "formal": "Sehr geehrte/r (#)",
+            "informal": "Hallo (#)"
+        },
+        "Spanish": {
+            "formal": "Estimado/a (#)",
+            "informal": "Hola (#)"
+        },
+        "Italian": {
+            "formal": "Gentile (#)",
+            "informal": "Salve (#)"
+        }
+    }
+    
+    base_format = greeting_formats.get(language, {"formal": "Dear (#)", "informal": "Dear (#)"})
+    
+    if formality and "formal" in formality.lower():
+        return base_format.get("formal", "Dear (#)")
+    elif formality and "informal" in formality.lower():
+        return base_format.get("informal", "Dear (#)")
+    else:
+        # Default to formal for business contexts
+        return base_format.get("formal", "Dear (#)")
+
 def get_language_instructions(language, formality=None):
     """Get detailed language-specific instructions for better native output."""
     language_guides = {
@@ -164,8 +203,11 @@ def build_prompt(resume_text, cover_text, job_text, additional_notes="", tone=No
 
     # Build language-specific instructions
     if language != "English" and lang_guide:
+        formality_desc = formality if formality else 'standard business tone'
         language_instruction = f"""
-        LANGUAGE: Write in {language} using {formality if formality else 'standard business tone'}.
+        LANGUAGE: Write in {language} using {formality_desc}.
+        
+        FORMALITY LEVEL: {formality_desc.upper()}. You MUST use the appropriate formality level throughout the entire letter - in both the greeting AND the body content.
         
         STYLE: {lang_guide.get('style', '')}
         CULTURAL CONTEXT: {lang_guide.get('cultural', '')}
@@ -174,20 +216,25 @@ def build_prompt(resume_text, cover_text, job_text, additional_notes="", tone=No
     else:
         language_instruction = ""
 
+    greeting_format = get_greeting_format(language, formality)
     system_instructions = (
         "You are a personal assistant that writes professional job application cover letters and responses. "
         "Always write in first person as the job applicant expressing interest in the position. "
-        "Begin by expressing enthusiasm for the specific role and company you're applying to. "
         "Only use information from the resume, cover letter, user-provided notes, and job description. "
         "Do not invent details. If a skill or experience is missing, emphasize transferable skills instead. "
         "Explicitly connect your skills, projects, or achievements to the requirements in the job description, "
         "and use keywords from the posting where appropriate. "
         "Focus on how you can deliver value to the company, not just on listing skills. "
         "Make sure to bring variety in sentences, not just starting with 'My', 'I', or 'Me'. "
-        "Format: Write exactly 3 paragraphs, each containing 35–45 words. Don't repeat information. "
         "Each sentence should be under 20 words for readability. "
         "If measurable results are present in the resume/cover letter, include one strong example. "
-        "Always close with a confident, positive one-liner sentence about contributing to the role or team (separate from the 3 paragraphs). "
+        "MANDATORY GREETING FORMAT: The cover letter MUST begin with the exact format provided: '{greeting_format}' where (#) is a placeholder. "
+        "Format: Write a complete professional cover letter with: "
+        f"1) A proper introduction/greeting ('{get_greeting_format(language, formality)}' where (#) is a placeholder for the recipient's name - use this exact format), "
+        "2) Exactly 3 body paragraphs, each containing 40–55 words, expressing enthusiasm for the role and connecting your skills and qualifications to the job requirements, "
+        "3) Followed by a short closing paragraph with a confident, positive one-liner sentence about contributing to the role or team, "
+        "4) An official closing (e.g., 'Sincerely' or appropriate closing for the language) followed by your full name and email address (extract from resume), then on a new line add: [LinkedIn](#) | [Github](#) | [Website](#) as placeholders. "
+        "CRITICAL: Do not repeat information across paragraphs. The closing paragraph (step 3) must be distinct from the third body paragraph (step 2) - avoid repeating phrases like 'I look forward to' or similar expressions in both. "
         f"Keep tone: {tone}. {language_instruction}"
     )
 
@@ -198,16 +245,17 @@ def build_prompt(resume_text, cover_text, job_text, additional_notes="", tone=No
         f"Additional Notes (user-provided):\n{additional_notes}\n\n"
         f"Language:\n{language}\n"
         f"Formality:\n{formality if formality else 'Standard business tone'}\n\n"
-        "Instructions: Using only the information above, produce a cohesive reply tailored to the job description. "
+        "Instructions: Using only the information above, produce a complete professional cover letter tailored to the job description. "
         "Make it sound natural and professional — not like an AI. Avoid complex language use like 'prowess', 'honed', or 'renowned'. "
         "Do not add any claims not supported by the provided materials. "
         "If no direct match is found, highlight transferable skills starting with your study background or related projects. "
         "This should be a job application cover letter, not a response from the employer. "
-        "Format requirements: Write exactly 3 paragraphs of 35–45 words each, followed by a one-liner closing sentence that describes what you hope to start doing together. "
-        "If the job description mentions specific response requirements (like 'mention your price', 'include the project duration', 'specify your availability', etc.), "
-        "you MUST address them directly using this exact format: 'As requested, hereby my indication of requirement XYZ...'. "
-        "Do NOT avoid the requirement by saying you'll discuss it later. Always provide the placeholder format immediately. "
-        "IMPORTANT: Never fill in actual numbers, timeframes, or prices - always use [response] placeholder. "
+        "Structure requirements: "
+        f"1) Start with a proper greeting ('{get_greeting_format(language, formality)}' where (#) is a placeholder for the recipient's name - use this exact format), "
+        "2) Write exactly 3 body paragraphs of 40-55 words each, expressing enthusiasm for the role and connecting your skills and qualifications to the job requirements, "
+        "3) Followed by a short closing paragraph with a confident, positive one-liner sentence about contributing to the role or team, "
+        "4) End with an official closing (e.g., 'Sincerely' or appropriate closing for the language) followed by your full name and email address (extract from resume), then on a new line add: [LinkedIn](#) | [Github](#) | [Website](#) as placeholders. "
+        "CRITICAL: The closing paragraph (step 3) must be distinct from the third body paragraph (step 2). Do not repeat phrases like 'I look forward to contributing' or similar expressions in both paragraphs. "
     )
 
     return system_instructions, user_content

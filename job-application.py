@@ -38,6 +38,10 @@ with col2:
     job_url = st.text_input("Job URL (optional)")
     job_text = st.text_area("Or paste job description text here (optional)")
 
+
+# Additional user-provided notes at the bottom
+additional_notes = st.text_input("Manual notes (optional)", placeholder="Add any short notes you want considered, e.g., 'experience with WordPress'.")
+
 # Tone, language, and formality selection
 col1, col2, col3 = st.columns(3)
 with col1:
@@ -63,19 +67,21 @@ with col3:
         formality = None
         st.selectbox("Formality", ["Standard business tone"], disabled=True, key="formality_disabled")
 
-# Additional user-provided notes at the bottom
-additional_notes = st.text_input("Manual notes (optional)", placeholder="Add any short notes you want considered in ENGLISH, e.g., 'experience with WordPress'.")
-
-# Store generated content in session state for rewriting
+# Store generated content in session state
 if 'last_generated_content' not in st.session_state:
     st.session_state.last_generated_content = ""
 
-# Generate and Rewrite buttons
-generate_clicked = st.button("Generate reply", key="generate_btn")
-rewrite_clicked = st.button("Rewrite", key="rewrite_btn")
+# Generate button - change text based on whether content exists
+button_text = "Re-generate response" if st.session_state.last_generated_content else "Generate response"
+generate_clicked = st.button(button_text, key="generate_btn", use_container_width=False)
 
-# Process files and generate/rewrite content
-if generate_clicked or rewrite_clicked:
+# Check for regenerate button from bottom (will be defined later but we check here)
+regenerate_clicked = st.session_state.get('regenerate_clicked', False)
+if 'regenerate_clicked' in st.session_state:
+    del st.session_state['regenerate_clicked']
+
+# Process files and generate content (works for both buttons)
+if generate_clicked or regenerate_clicked:
     resume_text = ""
     cover_text = ""
     if resume_file:
@@ -98,6 +104,7 @@ if generate_clicked or rewrite_clicked:
     # Basic validation
     if not (resume_text or cover_text):
         st.error("Please upload at least your resume or cover letter.")
+        st.stop()
     elif not (job_text or job_url):
         st.warning("No job description provided so the reply will be generic based only on your resume/cover letter.")
 
@@ -114,66 +121,52 @@ if generate_clicked or rewrite_clicked:
         st.error("OpenAI API key missing. Please check your API key file or environment variable.")
     else:
         try:
-            if rewrite_clicked and st.session_state.last_generated_content:
-                st.info("Rewriting...")
-                # For rewriting, we'll use the previous content as context
-                rewrite_prompt = f"""
-                Please rewrite the following text to improve it. Keep the same content and meaning but make it sound more natural and native in {language}. 
-                Make sure to use appropriate formality level: {formality if formality else 'standard business tone'}.
-                Format: Write exactly 3 paragraphs of 35–45 words each (not much more), followed by a one-liner closing sentence that describes what you hope to start doing together.
-                Avoid overly formal or non-native expressions.
-                
-                Original text:
-                {st.session_state.last_generated_content}
-                
-                Please provide an improved version that sounds more natural and native.
-                """
-                
-                response = openai.chat.completions.create(
-                    model="gpt-4o",
-                    messages=[
-                        {"role": "user", "content": rewrite_prompt}
-                    ],
-                    temperature=0.3,
-                    max_tokens=600,
-                )
-                output = response.choices[0].message.content.strip()
-                st.success("Reply rewritten")
-            else:
-                st.info("Generating...")
-                # Adjust temperature based on language for better native output
-                temperature = 0.3 if language == "English" else 0.4
-                
-                response = openai.chat.completions.create(
-                    model="gpt-4o",
-                    messages=[
-                        {"role": "system", "content": system_instructions},
-                        {"role": "user", "content": user_content}
-                    ],
-                    temperature=temperature,
-                    max_tokens=600,
-                )
-                output = response.choices[0].message.content.strip()
-                st.success("Reply generated")
+            # Generate new response
+            st.info("Generating...")
+            # Adjust temperature based on language for better native output
+            temperature = 0.3 if language == "English" else 0.4
             
-            # Store the generated content for potential rewriting
-            st.session_state.last_generated_content = output
-            st.text_area("Generated reply", value=output, height=300, key="generated_reply")
+            response = openai.chat.completions.create(
+                model="gpt-4o",
+                messages=[
+                    {"role": "system", "content": system_instructions},
+                    {"role": "user", "content": user_content}
+                ],
+                temperature=temperature,
+                max_tokens=600,
+            )
+            output = response.choices[0].message.content.strip()
             
-            # Check for response placeholders and show warning
-            if "[response]" in output:
-                st.warning("⚠️ **Action Required**: This response contains placeholder(s) marked with [response] that need to be filled in with your specific information (e.g., price, timeline, availability). Please review and update these before sending.")
+            # Store the generated content
+            if output:
+                st.session_state.last_generated_content = output
             
         except Exception as e:
             st.error(f"Error while generating: {e}")
 
-# Show last generated content if available (for rewriting context)
-if st.session_state.last_generated_content and not (generate_clicked or rewrite_clicked):
-    st.text_area("Generated reply", value=st.session_state.last_generated_content, height=300, key="generated_reply")
+# Show last generated content if available
+# Note: Streamlit reruns on widget changes, but we only process/generate when button is clicked
+if st.session_state.get('last_generated_content'):
+    st.markdown("### Generated Reply")
+    # Use columns to make text area narrower (70% width), left-aligned
+    col_left, col_right = st.columns([0.7, 0.3])
+    with col_left:
+        st.text_area(
+            "Generated reply",
+            value=st.session_state.last_generated_content,
+            height=400,
+            key="generated_reply_display",
+            disabled=False,
+            label_visibility="collapsed"
+        )
+        st.caption("💡 Select text and copy (Ctrl+C / Cmd+C)")
     
-    # Check for response placeholders and show warning
-    if "[response]" in st.session_state.last_generated_content:
-        st.warning("⚠️ **Action Required**: This response contains placeholder(s) marked with [response] that need to be filled in with your specific information (e.g., price, timeline, availability). Please review and update these before sending.")
-
-st.markdown("---")
-st.caption("Template strictly uses only uploaded resume & cover letter and provided job description. Do not claim skills not present in your documents.")
+    # User-friendly note about checking details
+    st.info("📝 **Before sending:** Please review the generated cover letter and update:\n"
+            "• The greeting (replace (#) with the hiring manager's name if available in the pasted job description)\n"
+            "• Any specific questions or requirements mentioned in the job description (e.g., salary expectations, availability, project duration)")
+    
+    # Re-generate button below the output
+    if st.button("Re-generate response", key="regenerate_btn_bottom", use_container_width=False):
+        st.session_state['regenerate_clicked'] = True
+        st.rerun()
